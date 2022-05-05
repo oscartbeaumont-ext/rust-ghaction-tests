@@ -28,10 +28,10 @@ jobs:
           # - os: macos-latest
           #   sccache-path: /Users/runner/Library/Caches/Mozilla.sccache
           # TODO: Windows sscache
-    env:
-      RUSTC_WRAPPER: sccache
-      SCCACHE_CACHE_SIZE: 3.25G
-      SCCACHE_DIR: ${{ matrix.sccache-path }}
+    # env:
+    #   RUSTC_WRAPPER: sccache
+    #   SCCACHE_CACHE_SIZE: 3.25G
+    #   SCCACHE_DIR: ${{ matrix.sccache-path }}
     
     steps:
       - name: Checkout repository
