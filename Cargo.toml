@@ -1,7 +1,4 @@
-[package]
-name = "rust-ghactions-tests"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-actix-web = "4.0.1"
+[workspace]
+members = [
+    "./core"
+]

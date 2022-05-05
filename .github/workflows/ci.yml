@@ -36,59 +36,107 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-          
-      - name: Install sccache (ubuntu-latest)
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          LINK: https://github.com/mozilla/sccache/releases/download
-          SCCACHE_VERSION: 0.3.0 # TODO: Make this get latest!
-        run: |
-          SCCACHE_FILE=sccache-$SCCACHE_VERSION-x86_64-unknown-linux-musl
-          mkdir -p $HOME/.local/bin
-          curl -L "$LINK/$SCCACHE_VERSION/$SCCACHE_FILE.tar.gz" | tar xz
-          mv -f $SCCACHE_FILE/sccache $HOME/.local/bin/sccache
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      # - name: Install sccache (macos-latest)
-      #   if: matrix.os == 'macos-latest'
-      #   run: |
-      #     brew update
-      #     brew install sccache
-      - name: Install Rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          components: rustfmt, rust-src
-
-      - name: Cache cargo registry
+      
+      - name: Cache cargo state
         uses: actions/cache@v2
-        continue-on-error: false
+        env:
+          cache-name: cargo-state
         with:
           path: |
             ~/.cargo/registry
-            ~/.cargo/git            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ matrix.platform }}-stable-${{ env.cache-name }}-${{ hashFiles('**/Cargo.toml') }}-${{ env.CURRENT_DATE }}
           restore-keys: |
-                        ${{ runner.os }}-cargo-
-      - name: Save sccache
+            ${{ matrix.platform }}-stable-${{ env.cache-name }}-${{ hashFiles('**/Cargo.toml') }}-
+            ${{ matrix.platform }}-stable-${{ env.cache-name }}-
+            ${{ matrix.platform }}-stable-
+            ${{ matrix.platform }}-
+      
+      - name: Install Rust stable
+         uses: actions-rs/toolchain@v1
+         with:
+           toolchain: stable
+           profile: minimal
+           override: true
+           components: rustfmt, rust-src
+
+      - name: Cache core cargo target
         uses: actions/cache@v2
-        continue-on-error: false
+        env:
+          cache-name: cargo-core
         with:
-          path: ${{ matrix.sccache-path }}
-          key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+          path: target
+          # Add date to the cache to keep it up to date
+          key: ${{ matrix.platform }}-stable-${{ env.cache-name }}-${{ hashFiles('core/**/Cargo.toml') }}-${{ env.CURRENT_DATE }}
+          # Restore from outdated cache for speed
           restore-keys: |
-                        ${{ runner.os }}-sccache-
-      - name: Start sccache server
-        run: sccache --start-server
+            ${{ matrix.platform }}-stable-${{ env.cache-name }}-${{ hashFiles('core/**/Cargo.toml') }}
+            ${{ matrix.platform }}-stable-${{ env.cache-name }}-
+            ${{ matrix.platform }}-stable-
+            ${{ matrix.platform }}-
       
       - name: Build Core
-        run: cargo build --release
+        run: cargo build -p core --release
       
       - name: Build Core (v2)
-        run: cargo build --release
+        run: cargo build -p core --release
 
-      - name: Print sccache stats
-        run: sccache --show-stats
-      - name: Stop sccache server
-        run: sccache --stop-server || true
+
+
+          
+      # - name: Install sccache (ubuntu-latest)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   env:
+      #     LINK: https://github.com/mozilla/sccache/releases/download
+      #     SCCACHE_VERSION: 0.3.0 # TODO: Make this get latest!
+      #   run: |
+      #     SCCACHE_FILE=sccache-$SCCACHE_VERSION-x86_64-unknown-linux-musl
+      #     mkdir -p $HOME/.local/bin
+      #     curl -L "$LINK/$SCCACHE_VERSION/$SCCACHE_FILE.tar.gz" | tar xz
+      #     mv -f $SCCACHE_FILE/sccache $HOME/.local/bin/sccache
+      #     echo "$HOME/.local/bin" >> $GITHUB_PATH
+      # # - name: Install sccache (macos-latest)
+      # #   if: matrix.os == 'macos-latest'
+      # #   run: |
+      # #     brew update
+      # #     brew install sccache
+      # - name: Install Rust stable
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: stable
+      #     profile: minimal
+      #     override: true
+      #     components: rustfmt, rust-src
+
+      # - name: Cache cargo registry
+      #   uses: actions/cache@v2
+      #   continue-on-error: false
+      #   with:
+      #     path: |
+      #       ~/.cargo/registry
+      #       ~/.cargo/git            
+      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      #     restore-keys: |
+      #                   ${{ runner.os }}-cargo-
+      # - name: Save sccache
+      #   uses: actions/cache@v2
+      #   continue-on-error: false
+      #   with:
+      #     path: ${{ matrix.sccache-path }}
+      #     key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+      #     restore-keys: |
+      #                   ${{ runner.os }}-sccache-
+      # - name: Start sccache server
+      #   run: sccache --start-server
+      
+      # - name: Build Core
+      #   run: cargo build --release
+      
+      # - name: Build Core (v2)
+      #   run: cargo build --release
+
+      # - name: Print sccache stats
+      #   run: sccache --show-stats
+      # - name: Stop sccache server
+      #   run: sccache --stop-server || true
